@@ -119,9 +119,10 @@ export async function callKimi(
  */
 export function getKimiModels(): string[] {
   return [
-    'moonshot-v1-8k',      // 8K 上下文
-    'moonshot-v1-32k',     // 32K 上下文
-    'moonshot-v1-128k',    // 128K 上下文
+    'kimi-k2-turbo-preview',
+    'kimi-k2-0905-preview',
+    'kimi-k2-thinking-turbo',
+    'kimi-k2-thinking'
   ];
 }
 

@@ -9,9 +9,9 @@ import type { AppConfig, ProjectConfig, LLMConfig, LLMProvider } from './types.j
 
 /** 默认 LLM 配置 */
 const DEFAULT_LLM_CONFIG: LLMConfig = {
-  provider: 'anthropic',
-  model: 'claude-sonnet-4-20250514',
-  maxTokens: 8192,
+  provider: 'kimi',
+  model: 'kimi-k2-turbo-preview',
+  maxTokens: 32000,
   temperature: 0.7,
 };
 
@@ -190,7 +190,7 @@ function getDefaultModel(provider: LLMProvider): string {
     openai: 'gpt-4o',
     ollama: 'llama3.2',
     grok: 'grok-2-latest',
-    kimi: 'moonshot-v1-32k',
+    kimi: 'kimi-k2-turbo-preview',
   };
   return models[provider];
 }
