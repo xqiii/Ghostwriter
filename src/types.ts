@@ -13,24 +13,30 @@ export type LLMProvider = 'anthropic' | 'openai' | 'ollama' | 'grok' | 'kimi';
 /** LLM 消息角色 */
 export type MessageRole = 'system' | 'user' | 'assistant' | 'tool';
 
+/** 工具调用信息（原生格式） */
+export interface NativeToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
 /** 单条消息 */
 export interface Message {
   role: MessageRole;
   content: string;
   name?: string; // 用于 tool 消息
-  tool_call_id?: string;
+  tool_call_id?: string; // 用于 tool result 关联
+  tool_calls?: NativeToolCall[]; // assistant 消息中的工具调用
 }
 
 /** LLM 返回的结构化响应 */
 export interface LLMResponse {
-  /** 逐步思考过程 */
-  thinking: string[];
-  /** 执行计划 */
-  plan: string[];
-  /** 工具调用列表 */
-  tool_calls: ToolCall[];
-  /** 最终响应 */
-  response: string;
+  /** 文本响应内容 */
+  content: string;
+  /** 工具调用列表（原生格式） */
+  tool_calls: NativeToolCall[];
+  /** 停止原因 */
+  stop_reason?: 'end_turn' | 'tool_use' | 'max_tokens' | 'stop_sequence';
 }
 
 /** LLM 配置 */
@@ -41,6 +47,31 @@ export interface LLMConfig {
   baseUrl?: string;
   maxTokens?: number;
   temperature?: number;
+}
+
+/** 用于 API 调用的工具格式（OpenAI 兼容） */
+export interface OpenAIToolFormat {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: 'object';
+      properties: Record<string, unknown>;
+      required?: string[];
+    };
+  };
+}
+
+/** 用于 API 调用的工具格式（Anthropic） */
+export interface AnthropicToolFormat {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
 }
 
 // ============================================================================
@@ -184,7 +215,6 @@ export interface AgentState {
   config: AgentConfig;
   messages: Message[];
   isRunning: boolean;
-  currentToolCall?: ToolCall;
 }
 
 // ============================================================================

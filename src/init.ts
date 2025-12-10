@@ -292,7 +292,7 @@ ${truncatedOverview}`;
   
   const response = await llmClient.call(messages);
   
-  return response.response;
+  return response.content;
 }
 
 /**

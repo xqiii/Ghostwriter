@@ -3,7 +3,7 @@
  * 管理和导出所有可用工具
  */
 
-import type { ToolDefinition, ToolCall, ToolResult, ToolContext } from '../types.js';
+import type { ToolDefinition, ToolCall, ToolResult, ToolContext, OpenAIToolFormat, AnthropicToolFormat } from '../types.js';
 import { listFilesTool } from './list_files.js';
 import { readFileTool } from './read_file.js';
 import { writeFileTool } from './write_file.js';
@@ -54,6 +54,40 @@ export function getToolSchemas(): Array<{
     name: tool.name,
     description: tool.description,
     parameters: tool.parameters,
+  }));
+}
+
+/**
+ * 获取 OpenAI 兼容格式的工具定义
+ * 用于 OpenAI、Grok、Kimi 等兼容 API
+ */
+export function getOpenAITools(): OpenAIToolFormat[] {
+  return getAllTools().map(tool => ({
+    type: 'function' as const,
+    function: {
+      name: tool.name,
+      description: tool.description,
+      parameters: {
+        type: 'object' as const,
+        properties: tool.parameters.properties,
+        required: tool.parameters.required,
+      },
+    },
+  }));
+}
+
+/**
+ * 获取 Anthropic 格式的工具定义
+ */
+export function getAnthropicTools(): AnthropicToolFormat[] {
+  return getAllTools().map(tool => ({
+    name: tool.name,
+    description: tool.description,
+    input_schema: {
+      type: 'object' as const,
+      properties: tool.parameters.properties,
+      required: tool.parameters.required,
+    },
   }));
 }
 
