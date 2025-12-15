@@ -6,8 +6,9 @@
 
 - 🚀 **极轻量**: 纯 TypeScript/Node.js 实现，无重型框架依赖
 - 🖥️ **终端原生**: 完全运行在终端，无需浏览器或 GUI
-- 🔧 **工具系统**: 7 个核心工具，支持文件操作、命令执行、代码搜索
-- 🔌 **多模型支持**: 支持 Anthropic、OpenAI、Ollama、Grok、Kimi 等多个 LLM 提供商
+- 🔧 **混合工具系统**: 7 个高性能内置工具 + 可扩展的 MCP 工具
+- 🔌 **MCP 集成**: 支持 Model Context Protocol，可使用社区 MCP 服务器扩展能力
+- 🌐 **多模型支持**: 支持 Anthropic、OpenAI、Ollama、Grok、Kimi 等多个 LLM 提供商
 - 🛡️ **安全机制**: 危险操作需要用户确认，支持白名单配置
 - 🤖 **子代理系统**: 支持创建专门的测试、审查、重构子代理
 
@@ -72,6 +73,8 @@ ghostwriter> 帮我创建一个简单的 Express 服务器
 | `/provider` | 切换 LLM 提供商 |
 | `/debug` | 切换调试模式 |
 | `/status` | 显示当前状态 |
+| `/tools` | 查看所有可用工具（内置 + MCP） |
+| `/mcp` | 查看 MCP 服务器状态 |
 
 ### 子代理
 
@@ -144,7 +147,62 @@ npm run dev -- -m gpt-4o
 }
 ```
 
-## 🔧 核心工具
+### MCP 配置（可选）
+
+Ghostwriter 支持 [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)，可以使用社区 MCP 服务器扩展工具能力。
+
+在项目目录或用户主目录创建 `.ghostwriter/mcp-config.json`：
+
+```json
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "/path/to/your/project"
+      ]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "brave-search": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "env": {
+        "BRAVE_API_KEY": "${BRAVE_API_KEY}"
+      },
+      "disabled": true
+    }
+  }
+}
+```
+
+**常用 MCP 服务器：**
+
+- `@modelcontextprotocol/server-filesystem` - 高级文件系统操作
+- `@modelcontextprotocol/server-github` - GitHub 仓库操作
+- `@modelcontextprotocol/server-postgres` - PostgreSQL 数据库访问
+- `@modelcontextprotocol/server-sqlite` - SQLite 数据库访问
+- `@modelcontextprotocol/server-brave-search` - 网页搜索
+- 更多服务器请访问 [MCP Servers](https://github.com/modelcontextprotocol/servers)
+
+**使用方式：**
+
+```bash
+# 查看所有可用工具（内置 + MCP）
+ghostwriter> /tools
+
+# 查看 MCP 服务器状态
+ghostwriter> /mcp
+```
+
+## 🔧 内置工具
 
 | 工具 | 说明 | 风险等级 |
 |------|------|----------|
@@ -172,7 +230,7 @@ npm run dev -- -m gpt-4o
 | OpenAI | gpt-4o, gpt-4-turbo | 广泛兼容 |
 | Ollama | llama3.2, codellama | 本地运行，免费 |
 | Grok | grok-2-latest | xAI 提供 |
-| Kimi | moonshot-v1-8k/32k/128k | 月之暗面，长上下文 |
+| Kimi-K2 | kimi-k2-turbo-preview | 月之暗面，长上下文 |
 
 ## 📝 开发
 

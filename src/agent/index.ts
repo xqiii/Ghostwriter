@@ -15,7 +15,7 @@ import type {
   LLMResponse,
 } from '../types.js';
 import { LLMClient } from '../llm/index.js';
-import { executeTool, getTool } from '../tools/index.js';
+import { ToolManager } from '../tools/manager.js';
 import { getAgentConfig, parseAgentCommand } from './sub-agent.js';
 import {
   printToolCall,
@@ -43,13 +43,15 @@ export class Agent {
   private state: AgentState;
   private llmClient: LLMClient;
   private appConfig: AppConfig;
+  private toolManager: ToolManager;
   private debug: boolean;
   private projectContext: string | undefined;
 
   constructor(
     config: AgentConfig,
     llmClient: LLMClient,
-    appConfig: AppConfig
+    appConfig: AppConfig,
+    toolManager: ToolManager
   ) {
     this.state = {
       id: generateId(),
@@ -59,6 +61,7 @@ export class Agent {
     };
     this.llmClient = llmClient;
     this.appConfig = appConfig;
+    this.toolManager = toolManager;
     this.debug = appConfig.debug;
   }
 
@@ -139,15 +142,6 @@ export class Agent {
    * 执行单个工具调用
    */
   private async executeNativeToolCall(toolCall: NativeToolCall): Promise<ToolResult> {
-    // 检查工具是否可用
-    const tool = getTool(toolCall.name);
-    if (!tool) {
-      return {
-        success: false,
-        error: `未知工具: ${toolCall.name}`,
-      };
-    }
-
     // 检查代理是否有权限使用该工具
     if (!this.state.config.availableTools.includes(toolCall.name)) {
       return {
@@ -157,7 +151,10 @@ export class Agent {
     }
 
     const context = this.createToolContext();
-    return executeTool({ name: toolCall.name, arguments: toolCall.arguments }, context);
+    return this.toolManager.executeTool(
+      { name: toolCall.name, arguments: toolCall.arguments },
+      context
+    );
   }
 
   /**
@@ -284,15 +281,17 @@ export class AgentManager {
   private subAgents: Map<string, Agent> = new Map();
   private llmClient: LLMClient;
   private appConfig: AppConfig;
+  private toolManager: ToolManager;
   private projectContext: string | undefined;
 
-  constructor(llmClient: LLMClient, appConfig: AppConfig) {
+  constructor(llmClient: LLMClient, appConfig: AppConfig, toolManager: ToolManager) {
     this.llmClient = llmClient;
     this.appConfig = appConfig;
+    this.toolManager = toolManager;
 
     // 创建主代理
     const mainConfig = getAgentConfig('main');
-    this.mainAgent = new Agent(mainConfig, llmClient, appConfig);
+    this.mainAgent = new Agent(mainConfig, llmClient, appConfig, toolManager);
   }
 
   /**
@@ -322,7 +321,7 @@ export class AgentManager {
    */
   createSubAgent(type: AgentType): Agent {
     const config = getAgentConfig(type);
-    const agent = new Agent(config, this.llmClient, this.appConfig);
+    const agent = new Agent(config, this.llmClient, this.appConfig, this.toolManager);
     // 传递项目上下文给子代理
     if (this.projectContext) {
       agent.setProjectContext(this.projectContext);

@@ -218,6 +218,47 @@ export interface AgentState {
 }
 
 // ============================================================================
+// MCP 相关类型
+// ============================================================================
+
+/** MCP 服务器配置 */
+export interface MCPServerConfig {
+  command: string;
+  args: string[];
+  env?: Record<string, string>;
+  disabled?: boolean;
+}
+
+/** MCP 配置文件格式 */
+export interface MCPConfig {
+  mcpServers: Record<string, MCPServerConfig>;
+}
+
+/** MCP 工具信息 */
+export interface MCPToolInfo {
+  name: string;
+  description?: string;
+  inputSchema: {
+    type: 'object';
+    properties?: Record<string, unknown>;
+    required?: string[];
+  };
+  serverName: string;
+}
+
+/** 统一的工具来源 */
+export type ToolSource = 'builtin' | 'mcp';
+
+/** 扩展的工具信息（包含来源） */
+export interface ToolInfo {
+  name: string;
+  description: string;
+  parameters: ToolDefinition['parameters'];
+  source: ToolSource;
+  serverName?: string; // MCP 工具的服务器名称
+}
+
+// ============================================================================
 // UI 相关类型
 // ============================================================================
 
