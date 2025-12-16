@@ -3,8 +3,6 @@
  * 提供美观的终端输出功能
  */
 
-import * as readline from 'node:readline';
-
 /** ANSI 颜色代码 */
 const COLORS = {
   reset: '\x1b[0m',
@@ -179,42 +177,144 @@ export function printAssistantMessage(message: string): void {
   console.log(style('└─', 'cyan'));
 }
 
+/** 工具名称的友好映射 */
+const TOOL_FRIENDLY_NAMES: Record<string, string> = {
+  list_files: '📂 查看目录',
+  read_file: '📄 打开文件',
+  write_file: '✏️  写入文件',
+  append_file: '➕ 追加内容',
+  delete_file: '🗑️  删除文件',
+  run_command: '⚙️  运行命令',
+  search_codebase: '🔍 搜索代码',
+};
+
+/** 获取工具的友好名称 */
+function getFriendlyToolName(name: string): string {
+  return TOOL_FRIENDLY_NAMES[name] || `🔧 ${name}`;
+}
+
 /** 打印工具调用 */
 export function printToolCall(name: string, args: Record<string, unknown>): void {
   console.log('');
-  console.log(style(`🔧 执行工具: ${name}`, 'yellow'));
-  const argsStr = JSON.stringify(args, null, 2);
-  for (const line of argsStr.split('\n')) {
-    console.log(style('   ' + line, 'dim'));
+  const friendlyName = getFriendlyToolName(name);
+  console.log(style(friendlyName, 'yellow', 'bold'));
+
+  // 只显示关键参数，简化输出
+  const keyParams = getKeyParameters(name, args);
+  if (keyParams) {
+    console.log(style(`   ${keyParams}`, 'dim'));
+  }
+}
+
+/** 获取关键参数用于显示 */
+function getKeyParameters(toolName: string, args: Record<string, unknown>): string {
+  switch (toolName) {
+    case 'list_files':
+      return `路径: ${args.path || '.'}`;
+    case 'read_file':
+      return `文件: ${args.path}`;
+    case 'write_file':
+      return `文件: ${args.path}`;
+    case 'append_file':
+      return `文件: ${args.path}`;
+    case 'delete_file':
+      return `文件: ${args.path}`;
+    case 'run_command':
+      return `命令: ${args.command}`;
+    case 'search_codebase':
+      return `搜索: ${args.pattern}${args.filePattern ? ` (${args.filePattern})` : ''}`;
+    default:
+      // 对于未知工具，显示简化的参数
+      const entries = Object.entries(args).slice(0, 2);
+      return entries.map(([k, v]) => `${k}: ${JSON.stringify(v)}`).join(', ');
   }
 }
 
 /** 打印工具结果 */
 export function printToolResult(name: string, success: boolean, data?: unknown, error?: string): void {
+  const friendlyName = getFriendlyToolName(name);
+
   if (success) {
-    console.log(style(`✓ ${name} 执行成功`, 'green'));
+    console.log(style(`✓ ${friendlyName.replace(/[📂📄✏️➕🗑️⚙️🔍🔧]\s*/, '')} 完成`, 'green'));
+
     if (data) {
       const dataStr = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
-      const lines = dataStr.split('\n');
-      // 限制输出行数
-      const maxLines = 20;
-      if (lines.length > maxLines) {
-        for (const line of lines.slice(0, maxLines)) {
-          console.log(style('   ' + line, 'dim'));
-        }
-        console.log(style(`   ... 还有 ${lines.length - maxLines} 行`, 'dim'));
-      } else {
-        for (const line of lines) {
-          console.log(style('   ' + line, 'dim'));
-        }
-      }
+
+      // 根据工具类型智能显示结果
+      displayToolData(name, dataStr);
     }
   } else {
-    console.log(style(`✗ ${name} 执行失败`, 'red'));
+    console.log(style(`✗ ${friendlyName.replace(/[📂📄✏️➕🗑️⚙️🔍🔧]\s*/, '')} 失败`, 'red'));
     if (error) {
       console.log(style('   ' + error, 'red'));
     }
   }
+}
+
+/** 智能显示工具数据 */
+function displayToolData(toolName: string, dataStr: string): void {
+  const lines = dataStr.split('\n');
+
+  // 根据工具类型设置不同的显示策略
+  let maxLines: number;
+  let showPreview = false;
+
+  switch (toolName) {
+    case 'write_file':
+    case 'append_file':
+      // 写入/追加文件时，只显示简短预览
+      maxLines = 5;
+      showPreview = true;
+      break;
+    case 'read_file':
+      // 读取文件时，显示更多内容但仍然限制
+      maxLines = 15;
+      showPreview = true;
+      break;
+    case 'run_command':
+      // 命令执行结果，显示适中长度
+      maxLines = 10;
+      break;
+    case 'list_files':
+      // 列出文件，限制数量
+      maxLines = 20;
+      break;
+    case 'search_codebase':
+      // 搜索结果，适当限制
+      maxLines = 15;
+      break;
+    default:
+      maxLines = 10;
+  }
+
+  if (lines.length > maxLines) {
+    // 显示前几行
+    const previewLines = lines.slice(0, maxLines);
+    for (const line of previewLines) {
+      console.log(style('   ' + line, 'dim'));
+    }
+
+    // 显示省略信息
+    const remaining = lines.length - maxLines;
+    if (showPreview && remaining > 0) {
+      console.log(style(`   ... 已省略 ${remaining} 行${isCodeContent(dataStr) ? '代码' : ''}`, 'dim', 'italic'));
+    } else {
+      console.log(style(`   ... 还有 ${remaining} 行`, 'dim'));
+    }
+  } else {
+    // 内容较短，全部显示
+    for (const line of lines) {
+      console.log(style('   ' + line, 'dim'));
+    }
+  }
+}
+
+/** 判断是否为代码内容 */
+function isCodeContent(content: string): boolean {
+  // 简单的启发式判断：包含常见代码符号
+  const codeIndicators = ['{', '}', 'function', 'const', 'let', 'import', 'export', 'class', '=>'];
+  const indicatorCount = codeIndicators.filter(indicator => content.includes(indicator)).length;
+  return indicatorCount >= 3;
 }
 
 /** 打印思考过程（旧版兼容） */
